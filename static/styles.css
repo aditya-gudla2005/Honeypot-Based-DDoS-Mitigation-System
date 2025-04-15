@@ -1,0 +1,44 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f6f6f6;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+header {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+nav a {
+    margin: 0 15px;
+    text-decoration: none;
+    color: #0066cc;
+}
+
+.search-box {
+    margin: 20px 0;
+}
+
+.search-box input {
+    padding: 8px;
+    width: 300px;
+}
+
+.search-box button {
+    padding: 8px 15px;
+    background: #0066cc;
+    color: white;
+    border: none;
+}
