@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Honeypot Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input {
+            padding: 8px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        .log-entry {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h1>Wikipedia Honeypot Monitor</h1>
+        
+        <div class="panel">
+            <h2>Attack Logs</h2>
+            <button onclick="refreshLogs()">Refresh</button>
+            <div id="attackLogs" class="error">Loading...</div>
+        </div>
+        
+        <div class="panel">
+            <h2>Blocked IPs</h2>
+            <button onclick="refreshBlocked()">Refresh</button>
+            <div id="blockedIps" class="error">Loading...</div>
+        </div>
+        
+        <div class="panel">
+            <h2>Manual IP Management</h2>
+            <input type="text" id="ipAddress" placeholder="IP address">
+            <button onclick="unblockIp()">Unblock</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) throw new Error('Failed to fetch');
+                return await response.text();
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+        
+        async function refreshLogs() {
+            const logs = await fetchData('/api/logs');
+            document.getElementById('attackLogs').innerHTML = 
+                logs ? formatLogs(logs) : '<span class="error">Error: Failed to fetch</span>';
+        }
+        
+        async function refreshBlocked() {
+            const blocked = await fetchData('/api/blocked-ips');
+            document.getElementById('blockedIps').innerHTML = 
+                blocked ? formatBlocked(blocked) : '<span class="error">Error: Failed to fetch</span>';
+        }
+        
+        async function unblockIp() {
+            const ip = document.getElementById('ipAddress').value.trim();
+            if (!ip) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/unblock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `ip=${encodeURIComponent(ip)}`
+                });
+                
+                if (response.ok) {
+                    alert(`IP ${ip} unblocked successfully`);
+                    refreshBlocked();
+                } else {
+                    throw new Error('Unblock failed');
+                }
+            } catch (error) {
+                alert(`Error unblocking IP: ${error.message}`);
+            }
+        }
+        
+        function formatLogs(logs) {
+            return logs.split('\n').map(line => 
+                `<div class="log-entry">${line}</div>`
+            ).join('');
+        }
+        
+        function formatBlocked(blocked) {
+            return blocked.split('\n').filter(line => line.trim()).map(line => {
+                const [ip, timestamp] = line.split(' - ');
+                return `<div class="log-entry">${ip} <small>(${timestamp || 'no timestamp'})</small></div>`;
+            }).join('') || '<div>No blocked IPs</div>';
+        }
+        
+        // Initial load
+        refreshLogs();
+        refreshBlocked();
+    </script>
+</body>
+</html>
