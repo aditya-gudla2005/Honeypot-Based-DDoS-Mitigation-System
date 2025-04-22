@@ -151,7 +151,29 @@ def home():
         <button>Search</button>
     </form>
     """)
+# [Keep all your existing code above this]
 
+# ===== DASHBOARD ROUTES =====
+@app.route('/dashboard')
+def dashboard():
+    return send_from_directory('.', 'dashboard.html')
+
+@app.route('/api/unblock', methods=['POST'])
+def unblock_ip():
+    ip = request.form.get('ip', '').strip()
+    if not ip:
+        return "IP required", 400
+    
+    blocked_ips.discard(ip)
+    
+    # Update the blocked_ips file
+    if os.path.exists(BLOCKED_IPS_FILE):
+        with open(BLOCKED_IPS_FILE, 'w') as f:
+            f.write('\n'.join(f"{ip} - {datetime.now()}" for ip in blocked_ips))
+    
+    return f"Unblocked {ip}", 200
+
+# ===== LAUNCH APP =====
 if __name__ == '__main__':
     print("🔥 Honeypot active - Legitimate users will be redirected")
     print(f"Blocked IPs: {len(blocked_ips)}")
