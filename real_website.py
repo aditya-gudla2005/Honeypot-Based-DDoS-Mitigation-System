@@ -24,6 +24,6 @@ def article(title):
     return "Direct access forbidden", 403
 
 if __name__ == '__main__':
-    app.run(port=5000)  # Real site
+    app.run(port=10000)  # Real site
 
 
