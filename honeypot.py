@@ -2,6 +2,7 @@ from flask import Flask, request, redirect, render_template_string, abort
 import time
 from datetime import datetime
 import os
+import ipaddress
 
 app = Flask(__name__)
 
@@ -12,10 +13,36 @@ MAX_REQUESTS_PER_MIN = 100  # Increased to avoid false positives
 WHITELISTED_PATHS = ['/', '/favicon.ico', '/static/*']
 SAFE_USER_AGENTS = ['mozilla', 'chrome', 'safari', 'firefox', 'edge']
 
+# Cloudflare and Render IP ranges (CIDR notation)
+TRUSTED_NETWORKS = [
+    '104.16.0.0/13',    # Cloudflare
+    '216.24.57.0/24',   # Render
+    '172.16.0.0/12'     # Private network
+]
+
 # IP Management
 BLOCKED_IPS_FILE = "blocked_ips.txt"
 blocked_ips = set()
 request_counts = {}
+
+def is_trusted_ip(ip):
+    """Check if IP belongs to Cloudflare, Render, or private networks"""
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        for network in TRUSTED_NETWORKS:
+            if ip_obj in ipaddress.ip_network(network):
+                return True
+    except ValueError:
+        pass
+    return False
+
+def get_real_ip():
+    """Get the real client IP when behind Cloudflare"""
+    if 'CF-Connecting-IP' in request.headers:
+        return request.headers['CF-Connecting-IP']
+    if 'X-Forwarded-For' in request.headers:
+        return request.headers['X-Forwarded-For'].split(',')[0].strip()
+    return request.remote_addr
 
 # Load blocked IPs
 if os.path.exists(BLOCKED_IPS_FILE):
@@ -24,6 +51,10 @@ if os.path.exists(BLOCKED_IPS_FILE):
 
 def block_ip(ip):
     """Block an IP and log it"""
+    if is_trusted_ip(ip):
+        print(f"⚠️ Not blocking trusted IP: {ip}")
+        return
+        
     blocked_ips.add(ip)
     with open(BLOCKED_IPS_FILE, "a") as f:
         f.write(f"{ip} - {datetime.now()}\n")
@@ -31,6 +62,9 @@ def block_ip(ip):
 
 def is_attacker(ip, path, user_agent):
     """Enhanced attack detection that won't block legitimate users"""
+    if is_trusted_ip(ip):
+        return False
+        
     user_agent = user_agent.lower()
     
     # Always allow whitelisted paths
@@ -66,7 +100,7 @@ def is_attacker(ip, path, user_agent):
 
 @app.before_request
 def protect():
-    ip = request.remote_addr
+    ip = get_real_ip()
     path = request.path
     user_agent = request.headers.get('User-Agent', '')
     
