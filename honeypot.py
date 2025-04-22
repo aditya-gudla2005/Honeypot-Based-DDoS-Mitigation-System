@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Security Configuration
 REDIRECT_KEY = "SECURE_KEY_123"  # Must match real_website.py
-REAL_SITE_URL = "http://localhost:5000"
+REAL_SITE_URL = "https://my-real-website.onrender.com"
 MAX_REQUESTS_PER_MIN = 30  # Lowered for stricter blocking
 WHITELISTED_PATHS = ['/', '/favicon.ico']
 
