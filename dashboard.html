@@ -409,6 +409,60 @@
             document.body.appendChild(alert);
             setTimeout(() => alert.remove(), 3000);
         }
+        // ===== ENHANCED ERROR HANDLING =====
+async function fetchWithRetry(url, retries = 3) {
+    try {
+        const response = await fetch(url);
+        if (response.status === 404 && retries > 0) {
+            console.log(`Retrying ${url}... (${retries} left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return fetchWithRetry(url, retries - 1);
+        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
+    } catch (error) {
+        throw new Error(`Failed to fetch ${url}: ${error.message}`);
+    }
+}
+
+// ===== MODIFIED FETCH FUNCTIONS =====
+async function fetchLogs() {
+    try {
+        const logs = await fetchWithRetry('/api/logs');
+        document.getElementById('attackLogs').innerHTML = 
+            logs.split('\n').reverse().map(line => 
+                line ? `<div class="log-entry">${line}</div>` : ''
+            ).join('') || '<div class="log-entry">No attack logs yet</div>';
+    } catch (error) {
+        document.getElementById('attackLogs').innerHTML = 
+            `<div class="alert alert-error">${error.message}</div>`;
+    }
+}
+
+async function fetchBlockedIPs() {
+    try {
+        const ips = await fetchWithRetry('/api/blocked-ips');
+        document.getElementById('blockedIPs').innerHTML = 
+            ips.split('\n').filter(ip => ip.trim()).map(ip => 
+                `<div class="log-entry">${ip}</div>`
+            ).join('') || '<div class="log-entry">No blocked IPs yet</div>';
+    } catch (error) {
+        document.getElementById('blockedIPs').innerHTML = 
+            `<div class="alert alert-error">${error.message}</div>`;
+    }
+}
+
+// ===== INITIAL LOAD =====
+document.addEventListener('DOMContentLoaded', () => {
+    fetchLogs();
+    fetchBlockedIPs();
+    
+    // Auto-refresh every 5 seconds
+    setInterval(() => {
+        fetchLogs();
+        fetchBlockedIPs();
+    }, 5000);
+});
     </script>
 </body>
 </html>
