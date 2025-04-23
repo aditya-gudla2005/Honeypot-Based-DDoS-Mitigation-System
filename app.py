@@ -189,6 +189,27 @@ def unblock_ip():
     
     return f"Unblocked {ip}", 200
 
+@app.route('/api/debug/files')
+def debug_files():
+    """New debug endpoint to check files"""
+    return {
+        'files_exist': {
+            'honeypot.log': os.path.isfile('honeypot.log'),
+            'blocked_ips.txt': os.path.isfile('blocked_ips.txt')
+        },
+        'directory_contents': os.listdir('.')
+    }
+
+@app.route('/api/test-connection')
+def test_connection():
+    """New endpoint to test connectivity"""
+    return {
+        "status": "success",
+        "message": "Backend is reachable",
+        "timestamp": datetime.now().isoformat()
+    }, 200
+
+
 # ===== LAUNCH APP =====
 if __name__ == '__main__':
     print("🔥 Honeypot active - Legitimate users will be redirected")
