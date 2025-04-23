@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Honeypot_Dashboard</title>
+    <title>Honeypot Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -31,7 +31,6 @@
         .error {
             color: #dc3545;
         }
-        /* NEW STYLES */
         #connectionStatus {
             padding: 10px;
             margin-bottom: 15px;
@@ -48,28 +47,46 @@
     </style>
 </head>
 <body>
-    <!-- NEW CONNECTION STATUS DISPLAY -->
-    <div id="connectionStatus" class="status-bad">
-        Checking server connection...
+    <div id="connectionStatus" class="status-good">
+        ✓ Connected to backend at <span id="connectionTime"></span>
     </div>
 
     <div class="panel">
-        <h1>Wikipedia_Honeypot Monitor</h1>
+        <h1>Wikipedia Honeypot Monitor</h1>
         
-        [KEEP ALL YOUR EXISTING HTML CONTENT]
+        <div class="panel">
+            <h2>Attack Logs</h2>
+            <button onclick="fetchLogs()">Refresh</button>
+            <div id="attackLogs">Loading logs...</div>
+        </div>
+        
+        <div class="panel">
+            <h2>Blocked IPs</h2>
+            <button onclick="fetchBlockedIPs()">Refresh</button>
+            <div id="blockedIPs">Loading blocked IPs...</div>
+        </div>
+        
+        <div class="panel">
+            <h2>Manual IP Management</h2>
+            <input type="text" id="ipAddress" placeholder="Enter IP address">
+            <button onclick="unblockIP()">Unblock</button>
+            <div id="unblockStatus"></div>
+        </div>
     </div>
 
     <script>
-        // NEW CONNECTION CHECK FUNCTION
+        // Update connection time display
+        function updateConnectionTime() {
+            document.getElementById('connectionTime').textContent = 
+                new Date().toLocaleTimeString();
+        }
+        setInterval(updateConnectionTime, 1000);
+        updateConnectionTime();
+
         async function checkBackendConnection() {
             try {
                 const response = await fetch('/api/test-connection');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                
-                document.getElementById('connectionStatus').className = 'status-good';
-                document.getElementById('connectionStatus').innerHTML = 
-                    `✓ Connected to backend at ${new Date().toLocaleTimeString()}`;
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 return true;
             } catch (error) {
                 document.getElementById('connectionStatus').className = 'status-bad';
@@ -79,7 +96,6 @@
             }
         }
 
-        // MODIFIED fetchLogs WITH BETTER ERROR HANDLING
         async function fetchLogs() {
             if (!await checkBackendConnection()) return;
             
@@ -90,15 +106,14 @@
                 
                 document.getElementById('attackLogs').innerHTML = 
                     logs.split('\n').map(line => 
-                        `<div class="log-entry">${line || 'No logs found'}</div>`
-                    ).join('') || '<div>No logs available</div>';
+                        line ? `<div class="log-entry">${line}</div>` : '<div>No logs found</div>'
+                    ).join('');
             } catch (error) {
                 document.getElementById('attackLogs').innerHTML = 
-                    `<span class="error">Error: ${error.message}</span>`;
+                    `<div class="error">Error loading logs: ${error.message}</div>`;
             }
         }
 
-        // MODIFIED fetchBlockedIPs WITH BETTER ERROR HANDLING
         async function fetchBlockedIPs() {
             if (!await checkBackendConnection()) return;
             
@@ -110,20 +125,46 @@
                 document.getElementById('blockedIPs').innerHTML = 
                     ips.split('\n').filter(ip => ip.trim()).map(ip => 
                         `<div class="log-entry">${ip}</div>`
-                    ).join('') || '<div>No blocked IPs</div>';
+                    ).join('') || '<div>No blocked IPs found</div>';
             } catch (error) {
                 document.getElementById('blockedIPs').innerHTML = 
-                    `<span class="error">Error: ${error.message}</span>`;
+                    `<div class="error">Error loading blocked IPs: ${error.message}</div>`;
             }
         }
 
-        // Initial load with connection check
-        checkBackendConnection().then(connected => {
-            if (connected) {
-                fetchLogs();
-                fetchBlockedIPs();
+        async function unblockIP() {
+            const ip = document.getElementById('ipAddress').value.trim();
+            if (!ip) {
+                document.getElementById('unblockStatus').innerHTML = 
+                    '<div class="error">Please enter an IP address</div>';
+                return;
             }
-        });
+
+            try {
+                const response = await fetch('/api/unblock', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `ip=${encodeURIComponent(ip)}`
+                });
+                
+                const result = await response.text();
+                if (!response.ok) throw new Error(result);
+                
+                document.getElementById('unblockStatus').innerHTML = 
+                    `<div style="color:green">Successfully unblocked ${ip}</div>`;
+                fetchBlockedIPs();
+            } catch (error) {
+                document.getElementById('unblockStatus').innerHTML = 
+                    `<div class="error">Unblock failed: ${error.message}</div>`;
+            }
+        }
+
+        // Initial load
+        checkBackendConnection();
+        fetchLogs();
+        fetchBlockedIPs();
     </script>
 </body>
 </html>
