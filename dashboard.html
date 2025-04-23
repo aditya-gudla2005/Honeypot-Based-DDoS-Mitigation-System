@@ -1,26 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Honeypot Dashboard</title>
+    <title>Honeypot_Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
         }
         .panel {
-            background: white;
+            background: #f8f9fa;
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
         }
         button {
             background: #0066cc;
@@ -29,18 +22,14 @@
             padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
-        }
-        input {
-            padding: 8px;
-            width: 200px;
-            margin-right: 10px;
+            margin: 5px 0;
         }
         .log-entry {
-            padding: 8px;
+            padding: 8px 0;
             border-bottom: 1px solid #eee;
         }
         .error {
-            color: red;
+            color: #dc3545;
         }
     </style>
 </head>
@@ -50,55 +39,65 @@
         
         <div class="panel">
             <h2>Attack Logs</h2>
-            <button onclick="refreshLogs()">Refresh</button>
-            <div id="attackLogs" class="error">Loading...</div>
+            <button onclick="fetchLogs()">Refresh</button>
+            <div id="attackLogs" class="error">Click Refresh to load logs</div>
         </div>
         
         <div class="panel">
             <h2>Blocked IPs</h2>
-            <button onclick="refreshBlocked()">Refresh</button>
-            <div id="blockedIps" class="error">Loading...</div>
+            <button onclick="fetchBlockedIPs()">Refresh</button>
+            <div id="blockedIPs" class="error">Click Refresh to load blocked IPs</div>
         </div>
         
         <div class="panel">
             <h2>Manual IP Management</h2>
-            <input type="text" id="ipAddress" placeholder="IP address">
-            <button onclick="unblockIp()">Unblock</button>
+            <input type="text" id="ipAddress" placeholder="Enter IP address">
+            <button onclick="unblockIP()">Unblock</button>
+            <div id="unblockStatus"></div>
         </div>
     </div>
 
     <script>
-        const API_BASE = window.location.origin;
-        
-        async function fetchData(endpoint) {
+        async function fetchLogs() {
             try {
-                const response = await fetch(`${API_BASE}${endpoint}`);
-                if (!response.ok) throw new Error('Failed to fetch');
-                return await response.text();
+                const response = await fetch('/api/logs');
+                if (!response.ok) throw new Error('Failed to fetch logs');
+                const logs = await response.text();
+                document.getElementById('attackLogs').innerHTML = 
+                    logs.split('\n').map(line => 
+                        `<div class="log-entry">${line || 'No logs found'}</div>`
+                    ).join('');
             } catch (error) {
-                console.error(error);
-                return null;
+                document.getElementById('attackLogs').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>`;
             }
         }
-        
-        async function refreshLogs() {
-            const logs = await fetchData('/api/logs');
-            document.getElementById('attackLogs').innerHTML = 
-                logs ? formatLogs(logs) : '<span class="error">Error: Failed to fetch</span>';
-        }
-        
-        async function refreshBlocked() {
-            const blocked = await fetchData('/api/blocked-ips');
-            document.getElementById('blockedIps').innerHTML = 
-                blocked ? formatBlocked(blocked) : '<span class="error">Error: Failed to fetch</span>';
-        }
-        
-        async function unblockIp() {
-            const ip = document.getElementById('ipAddress').value.trim();
-            if (!ip) return;
-            
+
+        async function fetchBlockedIPs() {
             try {
-                const response = await fetch(`${API_BASE}/api/unblock`, {
+                const response = await fetch('/api/blocked-ips');
+                if (!response.ok) throw new Error('Failed to fetch blocked IPs');
+                const ips = await response.text();
+                document.getElementById('blockedIPs').innerHTML = 
+                    ips.split('\n').filter(ip => ip.trim()).map(ip => 
+                        `<div class="log-entry">${ip}</div>`
+                    ).join('') || '<div>No blocked IPs</div>';
+            } catch (error) {
+                document.getElementById('blockedIPs').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function unblockIP() {
+            const ip = document.getElementById('ipAddress').value.trim();
+            if (!ip) {
+                document.getElementById('unblockStatus').innerHTML = 
+                    '<span class="error">Please enter an IP address</span>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/unblock', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -107,32 +106,21 @@
                 });
                 
                 if (response.ok) {
-                    alert(`IP ${ip} unblocked successfully`);
-                    refreshBlocked();
+                    document.getElementById('unblockStatus').innerHTML = 
+                        `<span style="color:green">Successfully unblocked ${ip}</span>`;
+                    fetchBlockedIPs(); // Refresh the blocked IPs list
                 } else {
-                    throw new Error('Unblock failed');
+                    throw new Error(await response.text());
                 }
             } catch (error) {
-                alert(`Error unblocking IP: ${error.message}`);
+                document.getElementById('unblockStatus').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>`;
             }
         }
-        
-        function formatLogs(logs) {
-            return logs.split('\n').map(line => 
-                `<div class="log-entry">${line}</div>`
-            ).join('');
-        }
-        
-        function formatBlocked(blocked) {
-            return blocked.split('\n').filter(line => line.trim()).map(line => {
-                const [ip, timestamp] = line.split(' - ');
-                return `<div class="log-entry">${ip} <small>(${timestamp || 'no timestamp'})</small></div>`;
-            }).join('') || '<div>No blocked IPs</div>';
-        }
-        
+
         // Initial load
-        refreshLogs();
-        refreshBlocked();
+        fetchLogs();
+        fetchBlockedIPs();
     </script>
 </body>
 </html>
