@@ -209,7 +209,29 @@ def test_connection():
         "timestamp": datetime.now().isoformat()
     }, 200
 
+# ===== DEBUG ENDPOINTS =====
+@app.route('/api/verify')
+def verify_routes():
+    """Verify all API endpoints are working"""
+    routes = {
+        '/api/logs': os.path.isfile('honeypot.log'),
+        '/api/blocked-ips': os.path.isfile('blocked_ips.txt'),
+        'current_dir': os.listdir('.')
+    }
+    return routes
 
+@app.route('/api/create-test-files')
+def create_test_files():
+    """Create test files if they don't exist"""
+    if not os.path.exists('honeypot.log'):
+        with open('honeypot.log', 'w') as f:
+            f.write(f"[TEST] Honeypot started at {datetime.now()}\n")
+    
+    if not os.path.exists(BLOCKED_IPS_FILE):
+        with open(BLOCKED_IPS_FILE, 'w') as f:
+            f.write(f"127.0.0.1 - {datetime.now()}\n")
+    
+    return "Test files created", 200
 # ===== LAUNCH APP =====
 if __name__ == '__main__':
     print("🔥 Honeypot active - Legitimate users will be redirected")
