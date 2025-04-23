@@ -3,8 +3,10 @@ import time
 from datetime import datetime
 import os
 import ipaddress
+from flask_cors import CORS  # <-- NEW IMPORT
 
 app = Flask(__name__, static_folder='static')
+CORS(app)  # <-- NEW LINE (Add right after Flask initialization)
 
 # ===== HONEYPOT CONFIGURATION (UNCHANGED) =====
 # Security Configuration
@@ -232,6 +234,30 @@ def create_test_files():
             f.write(f"127.0.0.1 - {datetime.now()}\n")
     
     return "Test files created", 200
+
+@app.route('/api/access-logs')
+def get_access_logs():
+    """Get Flask's built-in access logs"""
+    try:
+        with open('access.log', 'r') as f:
+            return f.read(), 200, {'Content-Type': 'text/plain'}
+    except FileNotFoundError:
+        return "No access logs found", 404
+
+# Enable access logging
+if not os.path.exists('access.log'):
+    open('access.log', 'w').close()
+
+@app.after_request
+def log_access(response):
+    """Log all requests in Apache Common Log Format"""
+    with open('access.log', 'a') as f:
+        f.write(
+            f'{request.remote_addr} - - [{datetime.now().strftime("%d/%b/%Y %H:%M:%S")}] '
+            f'"{request.method} {request.path} {request.environ.get("SERVER_PROTOCOL")}" '
+            f'{response.status_code} -\n'
+        )
+    return response
 # ===== LAUNCH APP =====
 if __name__ == '__main__':
     print("🔥 Honeypot active - Legitimate users will be redirected")
