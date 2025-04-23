@@ -161,6 +161,37 @@
             }
         }
 
+
+        async function verifySetup() {
+    try {
+        // 1. First check basic connection
+        const testConn = await fetch('/api/test-connection');
+        if (!testConn.ok) throw new Error("Backend not responding");
+        
+        // 2. Check if files exist
+        const verify = await fetch('/api/verify');
+        const data = await verify.json();
+        
+        // 3. Create files if missing
+        if (!data['/api/logs'] || !data['/api/blocked-ips']) {
+            const create = await fetch('/api/create-test-files');
+            if (!create.ok) throw new Error("Couldn't create log files");
+        }
+        
+        // 4. Now fetch actual data
+        fetchLogs();
+        fetchBlockedIPs();
+        
+    } catch (error) {
+        document.getElementById('attackLogs').innerHTML = 
+            `<div class="error">Setup error: ${error.message}</div>`;
+        document.getElementById('blockedIPs').innerHTML = 
+            `<div class="error">Setup error: ${error.message}</div>`;
+    }
+}
+
+// Replace the initial load at bottom of script with:
+verifySetup();
         // Initial load
         checkBackendConnection();
         fetchLogs();
