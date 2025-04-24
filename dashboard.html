@@ -448,45 +448,58 @@
         }
 
         async function fetchLogs() {
-            if (!await checkBackendConnection()) {
-                document.getElementById('attackLogs').innerHTML = `
+    if (!await checkBackendConnection()) {
+        document.getElementById('attackLogs').innerHTML = `
+            <div class="log-entry">
+                <div class="log-timestamp">[Error]</div>
+                <div class="log-message">Cannot connect to backend server</div>
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/access-logs');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const logs = await response.text();
+
+        let logEntries = logs.split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+                // Parse Apache-style access logs
+                const parts = line.match(/(.*?) - - \[(.*?)\] "(.*?)" (\d+) -/);
+                if (!parts) return '';
+                
+                const [_, ip, timestamp, request, status] = parts;
+                return `
                     <div class="log-entry">
-                        <div class="log-timestamp">[Error]</div>
-                        <div class="log-message">Cannot connect to backend server</div>
+                        <div class="log-timestamp">${timestamp}</div>
+                        <div class="log-message">${ip} → ${request} (${status})</div>
                     </div>
                 `;
-                return;
-            }
+            })
+            .reverse() // Show newest first
+            .join('');
 
-            try {
-                const response = await fetch('/api/logs');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const logs = await response.text();
+        if (!logEntries) {
+            logEntries = `
+                <div class="log-entry">
+                    <div class="log-timestamp">[Info]</div>
+                    <div class="log-message">No access logs found</div>
+                </div>
+            `;
+        }
 
-                let logEntries = logs.split('\n')
-                    .filter(line => line.trim())
-                    .map(formatLogEntry)
-                    .join('');
-
-                if (!logEntries) {
-                    logEntries = `
-                        <div class="log-entry">
-                            <div class="log-timestamp">[Info]</div>
-                            <div class="log-message">No attack logs found</div>
-                        </div>
-                    `;
-                }
-
-                document.getElementById('attackLogs').innerHTML = logEntries;
-                updateStats();
-            } catch (error) {
-                document.getElementById('attackLogs').innerHTML = `
-                    <div class="log-entry">
-                        <div class="log-timestamp">[Error]</div>
-                        <div class="log-message">${error.message}</div>
-                    </div>
-                `;
-            }
+        document.getElementById('attackLogs').innerHTML = logEntries;
+        updateStats();
+    } catch (error) {
+        document.getElementById('attackLogs').innerHTML = `
+            <div class="log-entry">
+                <div class="log-timestamp">[Error]</div>
+                <div class="log-message">${error.message}</div>
+            </div>
+        `;
+    }
         }
 
         async function fetchBlockedIPs() {
