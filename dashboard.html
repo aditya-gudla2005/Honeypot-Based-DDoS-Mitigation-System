@@ -316,8 +316,8 @@
 
         <div class="stats-container">
             <div class="stat-card">
-                <div class="stat-label">Total Attacks Blocked</div>
-                <div id="attackCount" class="stat-value">0</div>
+                <div class="stat-label">Total Traffic</div>
+                <div id="trafficCount" class="stat-value">0</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">IPs Currently Blocked</div>
@@ -396,17 +396,25 @@
         }
 
         // Update stats counters
-        function updateStats() {
-    // Total Attacks Blocked = Number of blocked IPs (from the API)
-    const blockedIPsContainer = document.getElementById('blockedIPs');
-    document.getElementById('attackCount').textContent = 
-        blockedIPsContainer.querySelectorAll('.log-entry').length - 1; // Subtract system message
-    
-    // IPs Currently Blocked (unchanged)
-    document.getElementById('blockedCount').textContent = 
-        blockedIPsContainer.querySelectorAll('.log-entry').length - 1;
-    
-    updateTimestamps();
+        async function updateStats() {
+    try {
+        // Fetch access logs and count lines (1 line = 1 request)
+        const response = await fetch('/api/access-logs');
+        if (!response.ok) throw new Error("Failed to fetch logs");
+        const logs = await response.text();
+        const requestCount = logs.split('\n').filter(line => line.trim()).length;
+
+        // Update traffic counter
+        document.getElementById('trafficCount').textContent = requestCount;
+
+        // Keep blocked IPs counter unchanged
+        document.getElementById('blockedCount').textContent = 
+            document.getElementById('blockedIPs').querySelectorAll('.log-entry').length - 1;
+
+        updateTimestamps();
+    } catch (error) {
+        console.error("Error updating stats:", error);
+    }
         }
 
         // Format log entries with timestamp and message
