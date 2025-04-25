@@ -397,15 +397,16 @@
 
         // Update stats counters
         function updateStats() {
-            const attackLogs = document.getElementById('attackLogs');
-            const blockedIPs = document.getElementById('blockedIPs');
-            
-            document.getElementById('attackCount').textContent = 
-                attackLogs.querySelectorAll('.log-entry').length - 1; // Subtract system message
-            document.getElementById('blockedCount').textContent = 
-                blockedIPs.querySelectorAll('.log-entry').length - 1; // Subtract system message
-            
-            updateTimestamps();
+    // Total Attacks Blocked = Number of blocked IPs (from the API)
+    const blockedIPsContainer = document.getElementById('blockedIPs');
+    document.getElementById('attackCount').textContent = 
+        blockedIPsContainer.querySelectorAll('.log-entry').length - 1; // Subtract system message
+    
+    // IPs Currently Blocked (unchanged)
+    document.getElementById('blockedCount').textContent = 
+        blockedIPsContainer.querySelectorAll('.log-entry').length - 1;
+    
+    updateTimestamps();
         }
 
         // Format log entries with timestamp and message
