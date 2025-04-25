@@ -497,55 +497,64 @@
             }
         }
 
-        async function fetchBlockedIPs() {
-            if (!await checkBackendConnection()) {
-                document.getElementById('blockedIPs').innerHTML = `
-                    <div class="log-entry">
-                        <div class="log-timestamp">[Error]</div>
-                        <div class="log-message">Cannot connect to backend server</div>
-                    </div>
-                `;
-                return;
-            }
+       async function fetchBlockedIPs() {
+    const container = document.getElementById('blockedIPs');
+    
+    if (!await checkBackendConnection()) {
+        container.innerHTML = `
+            <div class="log-entry">
+                <div class="log-timestamp">[Error]</div>
+                <div class="log-message">Connection failed</div>
+            </div>
+        `;
+        return;
+    }
 
-            try {
-                const response = await fetch('/api/blocked-ips');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const ips = await response.text();
-
-                let ipEntries = ips.split('\n')
-                    .filter(ip => ip.trim())
-                    .map(ip => {
-                        const [address, timestamp] = ip.split(' - ');
-                        return `
-                            <div class="log-entry">
-                                <div class="log-message"><strong>${address}</strong></div>
-                                <div class="log-timestamp">${timestamp || '[No timestamp]'}</div>
-                            </div>
-                        `;
-                    })
-                    .join('');
-
-                if (!ipEntries) {
-                    ipEntries = `
-                        <div class="log-entry">
-                            <div class="log-timestamp">[Info]</div>
-                            <div class="log-message">No blocked IPs found</div>
-                        </div>
-                    `;
-                }
-
-                document.getElementById('blockedIPs').innerHTML = ipEntries;
-                updateStats();
-            } catch (error) {
-                document.getElementById('blockedIPs').innerHTML = `
-                    <div class="log-entry">
-                        <div class="log-timestamp">[Error]</div>
-                        <div class="log-message">${error.message}</div>
-                    </div>
-                `;
-            }
+    try {
+        const response = await fetch('/api/blocked-ips');
+        
+        if (response.status === 404) {
+            container.innerHTML = `
+                <div class="log-entry">
+                    <div class="log-timestamp">[Info]</div>
+                    <div class="log-message">No IPs currently blocked</div>
+                </div>
+            `;
+            return;
         }
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const ips = await response.text();
+        const ipEntries = ips.split('\n')
+            .filter(ip => ip.trim())
+            .map(ip => {
+                const [address, timestamp] = ip.split(' - ');
+                return `
+                    <div class="log-entry">
+                        <div class="log-message"><strong>${address || '[Unknown]'}</strong></div>
+                        <div class="log-timestamp">${timestamp || '[No timestamp]'}</div>
+                    </div>
+                `;
+            })
+            .join('');
+
+        container.innerHTML = ipEntries || `
+            <div class="log-entry">
+                <div class="log-timestamp">[Info]</div>
+                <div class="log-message">No blocked IPs found</div>
+            </div>
+        `;
+        
+    } catch (error) {
+        container.innerHTML = `
+            <div class="log-entry">
+                <div class="log-timestamp">[Error]</div>
+                <div class="log-message">${error.message.includes('404') ? 'Blocked IPs list not found' : error.message}</div>
+            </div>
+        `;
+    }
+}
 
         async function unblockIP() {
             const ip = document.getElementById('ipAddress').value.trim();
