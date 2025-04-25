@@ -182,12 +182,26 @@ def unblock_ip():
     if not ip:
         return "IP required", 400
     
+    # Remove from blocked_ips set
     blocked_ips.discard(ip)
+    
+    # Reset rate limiting counters
+    if ip in request_counts:
+        del request_counts[ip]
     
     # Update the blocked_ips file
     if os.path.exists(BLOCKED_IPS_FILE):
-        with open(BLOCKED_IPS_FILE, 'w') as f:
-            f.write('\n'.join(f"{ip} - {datetime.now()}" for ip in blocked_ips))
+        try:
+            # Read current contents
+            with open(BLOCKED_IPS_FILE, 'r') as f:
+                lines = [line for line in f.read().splitlines() 
+                        if line.strip() and not line.startswith(ip)]
+            
+            # Rewrite file without the unblocked IP
+            with open(BLOCKED_IPS_FILE, 'w') as f:
+                f.write('\n'.join(lines))
+        except Exception as e:
+            return f"Error updating block file: {str(e)}", 500
     
     return f"Unblocked {ip}", 200
 
