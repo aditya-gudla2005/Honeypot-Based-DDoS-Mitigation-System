@@ -304,6 +304,31 @@
             margin-top: 10px;
         }
     </style>
+    <script>
+// Simple password protection
+const authUser = 'admin';  // Change this
+const authPass = 'shinchan';  // Change this
+
+function checkAuth() {
+    const user = prompt('Username:');
+    const pass = prompt('Password:');
+    
+    if (user === authUser && pass === authPass) {
+        return true;
+    } else {
+        alert('Access denied');
+        window.location.href = 'about:blank';
+        return false;
+    }
+}
+
+// Check auth when page loads
+window.onload = function() {
+    if (!checkAuth()) {
+        document.body.innerHTML = '<h1>Access Denied</h1>';
+    }
+};
+</script>
 </head>
 <body>
     <div class="container">
