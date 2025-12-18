@@ -1,9 +1,8 @@
-import os  # Add this line
+import os  
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# MUST match honeypot's key!
 REDIRECT_KEY = "SECURE_KEY_123"  
 
 articles = {
@@ -13,7 +12,6 @@ articles = {
 
 @app.route('/')
 def home():
-    # Allow ONLY requests with correct key
     if request.args.get('key') == REDIRECT_KEY:
         return render_template("wiki_home.html")
     return "Direct access forbidden", 403
@@ -25,7 +23,7 @@ def article(title):
     return "Direct access forbidden", 403
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))  # Render sets $PORT
+    port = int(os.environ.get("PORT", 10000))  
     app.run(host='0.0.0.0', port=port)
 
 
