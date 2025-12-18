@@ -3,12 +3,11 @@ import time
 from datetime import datetime
 import os
 import ipaddress
-from flask_cors import CORS  # <-- NEW IMPORT
+from flask_cors import CORS  
 
 app = Flask(__name__, static_folder='static')
-CORS(app)  # <-- NEW LINE (Add right after Flask initialization)
+CORS(app)  
 
-# ===== HONEYPOT CONFIGURATION (UNCHANGED) =====
 # Security Configuration
 REDIRECT_KEY = "SECURE_KEY_123"
 REAL_SITE_URL = "https://my-real-website-b3cg.onrender.com"
@@ -16,7 +15,7 @@ MAX_REQUESTS_PER_MIN = 100  # Increased to avoid false positives
 WHITELISTED_PATHS = ['/', '/favicon.ico', '/static/*']
 SAFE_USER_AGENTS = ['mozilla', 'chrome', 'safari', 'firefox', 'edge']
 
-# Cloudflare and Render IP ranges (CIDR notation)
+# Cloudflare and Render IP ranges)
 TRUSTED_NETWORKS = [
     '104.16.0.0/13',    # Cloudflare
     '216.24.57.0/24',   # Render
